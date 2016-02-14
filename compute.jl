@@ -17,28 +17,46 @@ type qubit
     element::Array{Complex}
 end
 
+#=-----------------------------------------------------------------------------#
+# FUNCTION
+#-----------------------------------------------------------------------------=#
+
 # Converting qubit type for manipulation later
 # This should convert a qubit to the surface of the Bloch sphere
 function bloch_to_qubit(angle::bloch)
     # Creating the cubit
-    Bob = initialize()
+    bit = initialize()
 
     # define ray
     # Note: Not sure where to put these
-    Bob.element[1] = cos(angle.theta / 2)
-    Bob.element[2] = exp(im*angle.phi) * sin(angle.theta / 2)
+    bit.element[1] = cos(angle.theta / 2)
+    bit.element[2] = exp(im*angle.phi) * sin(angle.theta / 2)
 
-    return Bob
+    return bit
 end
 
+# initializes a single qubit in the |0> state
 function initialize()
-    Bob = qubit([0,1])
-    return Bob
+    bit = qubit([0,1])
+    return bit
 end
 
-Bob_Bloch = bloch(1,0.5 * pi,0.5 * pi)
-Bob = bloch_to_qubit(Bob_Bloch)
-println(Bob.element[1], '\t', Bob.element[2])
+# Implement Hadamard gate
+function hadamard(bit::qubit)
+    # This is a predefined Hadamard gate
+    H_gate = (1 / sqrt(2)) * [Complex(1) Complex(1); Complex(1) Complex(-1)]
+    bit.element = H_gate * bit.element
+    return bit
+end
+
+#=-----------------------------------------------------------------------------#
+# MAIN
+#-----------------------------------------------------------------------------=#
+
+bit_bloch = bloch(1,0,0)
+bit = bloch_to_qubit(bit_bloch)
+bit = hadamard(bit)
+println(bit.element[1], '\t', bit.element[2])
 
 # List of functions that need to be implemented
 #=
