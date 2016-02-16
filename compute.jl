@@ -3,6 +3,8 @@
 # Purpose: To perform the computations necessary for each gate in the QSPICE
 #          program
 #
+#   Notes: Multiple qubit states can be created with the kron function
+#
 #-----------------------------------------------------------------------------=#
 
 # First, the qubit type. Defined on Bloch sphere
@@ -16,6 +18,15 @@ end
 type qubit
     element::Array{Complex}
 end
+
+# Define some gates (for testing)
+H_gate = (1 / sqrt(2)) * [Complex(1) Complex(1); Complex(1) Complex(-1)]
+Identity = [1 0; 0 1]
+swap_gate = [Complex(1) Complex(0) Complex(0) Complex(0);
+                 Complex(0) Complex(0) Complex(1) Complex(0);
+                 Complex(0) Complex(1) Complex(0) Complex(0);
+                 Complex(0) Complex(0) Complex(0) Complex(1)]
+
 
 #=-----------------------------------------------------------------------------#
 # FUNCTION
@@ -37,7 +48,7 @@ end
 
 # initializes a single qubit in the |0> state
 function initialize()
-    bit = qubit([0,1])
+    bit = qubit([1,0])
     return bit
 end
 
@@ -63,15 +74,44 @@ function rotation(bit::qubit, theta)
     return bit
 end
 
+# Implementing the swap gate
+function swap(bit::qubit)
+    # Implementation of swap gate
+    swap_gate = [Complex(1) Complex(0) Complex(0) Complex(0);
+                 Complex(0) Complex(0) Complex(1) Complex(0);
+                 Complex(0) Complex(1) Complex(0) Complex(0);
+                 Complex(0) Complex(0) Complex(0) Complex(1)]
+
+    bit.element = swap_gate * bit.element
+end
+
 #=-----------------------------------------------------------------------------#
 # MAIN
 #-----------------------------------------------------------------------------=#
+
+# Testing of single bit
 
 bit_bloch = bloch(1,0,pi)
 bit = bloch_to_qubit(bit_bloch)
 println(bit.element[1], '\t', bit.element[2])
 bit = rotation(bit, pi)
 println(bit.element[1], '\t', bit.element[2])
+
+# Testing multi-qubit operations
+bit1 = [0;1]
+bit2 = [1;0]
+
+superbit = kron(bit1, bit2)
+println("superbit is: ", superbit)
+
+# H(1) -> swap -> H(2)
+temp_bit = kron(H_gate, Identity) * superbit
+println(temp_bit)
+temp_bit = swap_gate * temp_bit
+println(temp_bit)
+temp_bit = kron(Identity, H_gate) * temp_bit
+
+println(temp_bit)
 
 # List of functions that need to be implemented
 #=
