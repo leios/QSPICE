@@ -4,6 +4,8 @@
 #          program
 #
 #   Notes: Multiple qubit states can be created with the kron function
+#          We can only swap between adjacent positions
+#          This should just be swapping the xth and yth row in the ID matrix
 #
 #-----------------------------------------------------------------------------=#
 
@@ -73,9 +75,8 @@ end
 # Implement Hadamard gate
 function hadamard(bit::qubit, gate, num)
     # Create initial gate structure
-    println(size(bit.element, 1))
     root_num = log2(size(bit.element, 1))
-    gate_array = [Identity for i = 1:Int(root_num)]
+    gate_array = [gate.Id for i = 1:Int(root_num)]
 
     gate_array[num] = gate.H
  
@@ -99,14 +100,16 @@ function rotation(bit::qubit, theta)
 end
 
 # Implementing the swap gate
-function swap(bit::qubit)
-    # Implementation of swap gate
-    swap_gate = [Complex(1) Complex(0) Complex(0) Complex(0);
-                 Complex(0) Complex(0) Complex(1) Complex(0);
-                 Complex(0) Complex(1) Complex(0) Complex(0);
-                 Complex(0) Complex(0) Complex(0) Complex(1)]
+function swap(bit::qubit, gate, num1, num2)
+    # Create initial gate structure
+    root_num = log2(size(bit.element, 1))
+    if root_num > 1
+        gate_array = [gate.Id for i = 1:Int(root_num) - 1]
+        gate_array[min(num1,num2)] = gate.Swap
+        bit.element = kron(gate_array...) * bit.element
+    end
 
-    bit.element = swap_gate * bit.element
+    return bit
 end
 
 #=-----------------------------------------------------------------------------#
@@ -137,7 +140,8 @@ println(temp_bit)
 
 # 3 qubit is similar to above:
 superbit3 = qubit(kron(bit1, bit2, bit3))
-superbit3 = hadamard(superbit3, gate, 2)
+println(superbit3.element)
+superbit3 = swap(superbit3, gate, 1, 2)
 println(superbit3.element)
 
 # List of functions that need to be implemented
