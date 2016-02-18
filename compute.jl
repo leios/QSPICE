@@ -20,13 +20,31 @@ type qubit
 end
 
 # Define some gates (for testing)
-H_gate = (1 / sqrt(2)) * [Complex(1) Complex(1); Complex(1) Complex(-1)]
-Identity = [1 0; 0 1]
-swap_gate = [Complex(1) Complex(0) Complex(0) Complex(0);
-                 Complex(0) Complex(0) Complex(1) Complex(0);
-                 Complex(0) Complex(1) Complex(0) Complex(0);
-                 Complex(0) Complex(0) Complex(0) Complex(1)]
+type quantum_gate
+    H
+    N
+    Id
+    Swap
+    Cont_n
+end
 
+H_gate = (1 / sqrt(2)) * [Complex(1) Complex(1); Complex(1) Complex(-1)]
+
+Identity = [1 0; 0 1]
+
+N_gate = [Complex(0) Complex(1); Complex(1) Complex(0)]
+
+swap_gate = [Complex(1) Complex(0) Complex(0) Complex(0);
+             Complex(0) Complex(0) Complex(1) Complex(0);
+             Complex(0) Complex(1) Complex(0) Complex(0);
+             Complex(0) Complex(0) Complex(0) Complex(1)]
+
+Control_n = [Complex(1) Complex(0) Complex(0) Complex(0);
+             Complex(0) Complex(1) Complex(0) Complex(0);
+             Complex(0) Complex(0) Complex(0) Complex(1);
+             Complex(0) Complex(0) Complex(1) Complex(0)]
+
+gate = quantum_gate(H_gate, N_gate, Identity, swap_gate, Control_n)
 
 #=-----------------------------------------------------------------------------#
 # FUNCTION
@@ -53,10 +71,16 @@ function initialize()
 end
 
 # Implement Hadamard gate
-function hadamard(bit::qubit)
-    # This is a predefined Hadamard gate
-    H_gate = (1 / sqrt(2)) * [Complex(1) Complex(1); Complex(1) Complex(-1)]
-    bit.element = H_gate * bit.element
+function hadamard(bit::qubit, gate, num)
+    # Create initial gate structure
+    println(size(bit.element, 1))
+    root_num = log2(size(bit.element, 1))
+    gate_array = [Identity for i = 1:Int(root_num)]
+
+    gate_array[num] = gate.H
+ 
+    bit.element = kron(gate_array...) * bit.element
+
     return bit
 end
 
@@ -100,18 +124,21 @@ println(bit.element[1], '\t', bit.element[2])
 # Testing multi-qubit operations
 bit1 = [0;1]
 bit2 = [1;0]
+bit3 = [1;0]
 
 superbit = kron(bit1, bit2)
 println("superbit is: ", superbit)
 
 # H(1) -> swap -> H(2)
-temp_bit = kron(H_gate, Identity) * superbit
-println(temp_bit)
-temp_bit = swap_gate * temp_bit
-println(temp_bit)
-temp_bit = kron(Identity, H_gate) * temp_bit
+# We can chain operations together:
+temp_bit = kron(Identity,H_gate) * swap_gate * kron(H_gate,Identity) * superbit
 
 println(temp_bit)
+
+# 3 qubit is similar to above:
+superbit3 = qubit(kron(bit1, bit2, bit3))
+superbit3 = hadamard(superbit3, gate, 2)
+println(superbit3.element)
 
 # List of functions that need to be implemented
 #=
@@ -122,12 +149,6 @@ function pauli_y()
 end
 
 function pauli_z()
-end
-
-function swap()
-end
-
-function xor()
 end
 
 function measure()
