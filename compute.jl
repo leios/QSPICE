@@ -104,8 +104,9 @@ function swap(bit::qubit, gate, num1, num2)
     # Create initial gate structure
     root_num = log2(size(bit.element, 1))
     if root_num > 1
-        gate_array = [gate.Id for i = 1:Int(root_num) - 1]
-        gate_array[min(num1,num2)] = gate.Swap
+        gate_array = [gate.Id for i = 1:Int(root_num)]
+        gate_array[num1] = gate.N
+        gate_array[num2] = gate.N
         bit.element = kron(gate_array...) * bit.element
     end
 
@@ -141,7 +142,7 @@ println(temp_bit)
 # 3 qubit is similar to above:
 superbit3 = qubit(kron(bit1, bit2, bit3))
 println(superbit3.element)
-superbit3 = swap(superbit3, gate, 1, 2)
+superbit3 = swap(superbit3, gate, 1, 3)
 println(superbit3.element)
 
 # List of functions that need to be implemented
