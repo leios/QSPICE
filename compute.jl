@@ -103,11 +103,28 @@ end
 function swap(bit::qubit, gate, num1, num2)
     # Create initial gate structure
     root_num = log2(size(bit.element, 1))
+    big_gate = []
     if root_num > 1
-        gate_array = [gate.Id for i = 1:Int(root_num)]
-        gate_array[num1] = gate.N
-        gate_array[num2] = gate.N
-        bit.element = kron(gate_array...) * bit.element
+        for i = 1:abs(num1 - num2)
+            gate_array = [gate.Id for i = 1:Int(root_num)-1]
+
+            println(i)
+
+            # Checking direction of movement
+            if num1 - num2 < 0
+                gate_array[num2 - i] = gate.Swap
+            else
+                gate_array[num2 + i - 1] = gate.Swap
+            end
+
+            if i == 1
+                big_gate = kron(gate_array...)
+            else
+                big_gate *= kron(gate_array...)
+            end
+
+        end
+        bit.element = big_gate * bit.element
     end
 
     return bit
@@ -126,15 +143,15 @@ bit = rotation(bit, pi)
 println(bit.element[1], '\t', bit.element[2])
 
 # Testing multi-qubit operations
-bit1 = [0;1]
+bit1 = [1;0]
 bit2 = [1;0]
-bit3 = [1;0]
+bit3 = [0;1]
 
 superbit = kron(bit1, bit2)
 println("superbit is: ", superbit)
 
 # H(1) -> swap -> H(2)
-# We can chain operations together:
+# We can chain operations together (in reverse order):
 temp_bit = kron(Identity,H_gate) * swap_gate * kron(H_gate,Identity) * superbit
 
 println(temp_bit)
@@ -142,7 +159,7 @@ println(temp_bit)
 # 3 qubit is similar to above:
 superbit3 = qubit(kron(bit1, bit2, bit3))
 println(superbit3.element)
-superbit3 = swap(superbit3, gate, 1, 3)
+superbit3 = swap(superbit3, gate, 3, 1)
 println(superbit3.element)
 
 # List of functions that need to be implemented
