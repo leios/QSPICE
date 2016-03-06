@@ -27,7 +27,7 @@ type quantum_gate
     N
     Id
     Swap
-    Cont_n
+    Cnot
 end
 
 H_gate = (1 / sqrt(2)) * [Complex(1) Complex(1); Complex(1) Complex(-1)]
@@ -100,31 +100,83 @@ function rotation(bit::qubit, theta)
 end
 
 # Implementing the swap gate
+# ERROR: We need to account for swapping everything back.
 function swap(bit::qubit, gate, num1, num2)
     # Create initial gate structure
+    # Number of bits = root_num
     root_num = log2(size(bit.element, 1))
+
+    # final gate for multiplication
     big_gate = []
+
+    # moving from low to high
+    low = min(num1, num2)
+    high = max(num1, num2) -1
+
+    # Defining gates
     if root_num > 1
-        for i = 1:abs(num1 - num2)
+        for i = low:high
             gate_array = [gate.Id for i = 1:Int(root_num)-1]
 
-            println(i)
+            gate_array[i] = gate.Swap
 
-            # Checking direction of movement
-            if num1 - num2 < 0
-                gate_array[num2 - i] = gate.Swap
-            else
-                gate_array[num2 + i - 1] = gate.Swap
-            end
-
-            if i == 1
+            if i == low
                 big_gate = kron(gate_array...)
             else
-                big_gate *= kron(gate_array...)
+                big_gate = big_gate * kron(gate_array...)
             end
+            
+        end
+
+        for i = high-1:-1:low
+            gate_array = [gate.Id for i = 1:Int(root_num)-1]
+
+            gate_array[i] = gate.Swap
+
+            big_gate = big_gate * kron(gate_array...)
 
         end
-        bit.element = big_gate * bit.element
+
+        # Final multiplication
+        if abs(num1 - num2) > 0
+            bit.element = big_gate * bit.element
+        end
+    end
+
+    return bit
+end
+
+# Implementing the Cnot function
+# Have not tested all cases, will look into later
+function cnot(bit::qubit, gate, control, flip)
+    root_num = log2(size(bit.element, 1))
+    big_gate = []
+
+    if root_num > 1
+        # Swap the bits into the appropriate positions of 1 and 2 for 
+        # control and flip, respectively.
+
+        # first swap everything into position
+        bit = swap(bit, gate, 1, control)
+        if flip != 1
+            bit = swap(bit, gate, 2, flip)
+        else
+            bit = swap(bit, gate, 2, control)
+        end
+
+        # performs cnot
+        gate_array = [gate.Id for i = 1:Int(root_num)-1]
+        gate_array[1] = gate.Cnot
+
+        bit.element = kron(gate_array...) * bit.element
+
+        # swaps back
+        if flip != 1
+            bit = swap(bit, gate, 2, flip)
+        else
+            bit = swap(bit, gate, 2, control)
+        end
+        bit = swap(bit, gate, 1, control)
     end
 
     return bit
@@ -143,8 +195,8 @@ bit = rotation(bit, pi)
 println(bit.element[1], '\t', bit.element[2])
 
 # Testing multi-qubit operations
-bit1 = [1;0]
-bit2 = [1;0]
+bit1 = [0;1]
+bit2 = [0;1]
 bit3 = [0;1]
 
 superbit = kron(bit1, bit2)
@@ -158,8 +210,18 @@ println(temp_bit)
 
 # 3 qubit is similar to above:
 superbit3 = qubit(kron(bit1, bit2, bit3))
+#=
+println("original superbit")
 println(superbit3.element)
-superbit3 = swap(superbit3, gate, 3, 1)
+superbit3 = swap(superbit3, gate, 1, 3)
+println("superbit after swap")
+println(superbit3.element)
+=#
+
+println(superbit3 == swap(swap(superbit3, gate, 1, 3), gate, 1, 3))
+
+superbit3 = cnot(superbit3, gate, 2, 1)
+println("superbit after cnot")
 println(superbit3.element)
 
 # List of functions that need to be implemented
