@@ -1,6 +1,6 @@
 #=-------------test.jl---------------------------------------------------------#
 #
-# Purpose: To test the functions in the compute.jl file with the qubit 
+# Purpose: To test the functions in the compute.jl file with the qubit
 #          operations
 #
 #   Notes: FactCheck implements an assert-like function in Julia
@@ -15,41 +15,70 @@ include("compute.jl")
 using FactCheck
 using Iterators
 
-# Generates random qubit for later
-function random_qubit(length)
-    # initialize array to a random set of 1/0's
-    r_array = [rand(0:1) for i in 1:length]
+const QUBITS = Array[[0,0], [0,1], [1,0], [1,1]]
 
-    # create / return qubit
-    r_qubit = qubit(r_array)
-    return r_qubit
+# Generates random qubit for later
+function random_qubit(num_bits)
+    return qubit(reduce(kron, [QUBITS[rand(1:length(QUBITS))] for _ in 1:num_bits]))
 end
 
+function random_qubit_list(num_bits, n)
+    return [random_qubit(num_bits) for _ in 1:n]
+end
+
+# Generates all distinct quantum bit vectors for num_bits
+function exhaustive_list(num_bits)
+    arrays = ([(Array[x...]) for x in product([QUBITS for i=1:num_bits]...)])
+    states = imap(x -> kron(x...), arrays) |> distinct |> x -> imap(qubit, x) |> collect
+    return states
+end
+
+roughly(q1::Qubit) = (q2::Qubit) -> isapprox(q1, q2)
+
 # Fact checking / asserting that the swaps happen as expected
-facts("Checking the swap gate for all cases up to qubit length 5.") do
+facts("Swap gate tests") do
+    context("Test for a single qubit") do
+        q = qubit([0,1])
+        @fact q --> roughly(swap(q))
+        @fact q --> roughly(swap(swap(q)))
+        @fact q --> roughly(swap(q, 4, 5))
+        @fact q --> roughly(swap(swap(q, 1, 4), 4, 5))
+    end
 
-    # Creating initial states
-    state_1 = [0;1]
-    state_0 = [1;0]
-    
-    # using iterator
-    for i in product(0:1, 0:1, 0:1, 0:1, 0:1)
-
-        # generating qubit states from iterator
-        q_states = [state_0 for j in 1:length(i)]
-        for j in i
-            if j != 0
-                q_states[j] = state_1
-            end
-        end
-
-        test_qubit = qubit(kron(q_states...))
-
-        println(i)
-        for j = 1:5, k = 1:5
-            println(j, '\t', k)
-            @fact test_qubit --> swap(swap(test_qubit,gate,j,k),gate,j,k)
+    context("Exhaustive test for 2 qubits") do
+        qubits = exhaustive_list(2)
+        not_same = qubit(kron([0,1], [1,0]))
+        @fact not_same --> FactCheck.not(swap(not_same))
+        for q in qubits
+            @fact q --> roughly(swap(swap(q)))
         end
     end
 
+    context("Exhaustive test for 3 qubits") do
+        qubits = exhaustive_list(3)
+        for q in qubits
+            for j = 1:3, k = 1:3
+                @fact q --> roughly(swap(swap(q, j, k), j, k))
+            end
+        end
+    end
+
+    context("Exhaustive test for 4 qubits") do
+        qubits = exhaustive_list(4)
+        for q in qubits
+            for j = 1:4, k = 1:4
+                @fact q --> roughly(swap(swap(q, j, k), j, k))
+            end
+        end
+    end
+
+    context("Exhaustive test for 5 qubits") do
+        qubits = exhaustive_list(5)
+        swap(swap(qubits[1], 1, 4), 1, 5)
+        for q in qubits
+            for j = 1:5, k = 1:5
+                @fact q --> roughly(swap(swap(q, j, k), j, k))
+            end
+        end
+    end
 end
