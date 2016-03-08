@@ -60,9 +60,6 @@ function getindex(qubit::Qubit, i::Int)
     return qubit.vector[i]
 end
 
-# Checks if two qubits are in eps2 range of each other. Note that
-# abs2 calculates abs(x - y)^2, so make sure to pass eps^2 for the
-# comparison (abs2 is more efficient than abs)
 function isapprox(q1::Qubit, q2::Qubit, atol=0.0001)
     for (x, y) in zip(q1.vector, q2.vector)
         if !isapprox(x, y, atol=0.0001)
