@@ -47,6 +47,8 @@ facts("Swap gate tests") do
 
     context("Exhaustive test for 2 qubits") do
         qubits = exhaustive_list(2)
+        not_same = qubit(kron([0,1], [1,0]))
+        @fact not_same --> FactCheck.not(swap(not_same))
         for q in qubits
             @fact q --> roughly(swap(swap(q)))
         end
