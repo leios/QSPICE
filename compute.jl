@@ -31,24 +31,29 @@ end
 # First, the Qubit type. Defined on Bloch sphere
 type Bloch
     r::Float64
-    phi::Float64
     theta::Float64
+    phi::Float64
 end
 
-# Now to hold the information from the Qubit
+# Now to move the information from the Bloch to qubit
 type Qubit
     vector::Vector{Complex{Float64}}
     bits::Int
 end
 
+# Initializes qubit with a particular state
 function qubit(vector::Vector)
     bits = Int(log2(size(vector, 1)))
     return Qubit(vector, bits)
 end
 
+# Defining input for multiple states at once
+qubit(s::Array...) = qubit(kron(s...))
+
 # Constructs a qubit from its Bloch sphere representation
 function qubit(angle::Bloch)
-    vector::Vector{Complex} = [cos(angle.theta / 2), exp(im*angle.phi) * sin(angle.theta / 2)]
+    vector::Vector{Complex} = ([cos(angle.theta / 2), 
+                                exp(im*angle.phi) * sin(angle.theta / 2)])
     return qubit(vector)
 end
 
@@ -72,13 +77,14 @@ end
 #=-----------------------------------------------------------------------------#
 # FUNCTION
 #-----------------------------------------------------------------------------=#
-const IDENTITY = [Complex(1) Complex(0); Complex(0) Complex(1)]
+const IDENTITY = [1.0 + 0im 0; 0 1]
 
 # Implement Hadamard gate
 function hadamard(q::Qubit, bit::Int = 1)
-    HADAMARD = @static (1 / sqrt(2)) * [Complex(1) Complex(1); Complex(1) Complex(-1)]
+    HADAMARD = @static (1 / sqrt(2)) * ([1.0 + 0im 1; 1 -1])
 
-    # If there's exactly one bit, ignore the position and return the correct result
+    # If there's exactly one bit, ignore the position and return 
+    # the correct result
     if q.bits == 1
         return Qubit(HADAMARD * q.vector, q.bits)
     end
@@ -88,25 +94,42 @@ function hadamard(q::Qubit, bit::Int = 1)
     return Qubit(kron(gate_array...) * q.vector, q.bits)
 end
 
+# adding in rotations along the Bloch sphere
+
 # Implementing the not gate
 function not(q::Qubit)
-    NOT = @static [Complex(0) Complex(1); Complex(1) Complex(0)]
+    NOT = @static [0.0 + 0im 1; 1 0]
     return Qubit(NOT * q.vector, q.bits)
+end
+
+pauli_x(q::Qubit) = not(q)
+
+function pauli_y(q::Qubit)
+    P_Y = @static [0.0 0-1im; 0-1im 0]
+    return Qubit(P_Y * q.vector, q.bits)
+end
+
+function pauli_z(q::Qubit)
+    P_Z = @static [1.0 + 0im 0; 0 -1]
+    return Qubit(P_Z * q.vector, q.bits)
 end
 
 # Implementing a rotation gate
 function rotation(q::Qubit, theta::Real)
-    rotation = [Complex(1) Complex(0); Complex(0) Complex(exp(im * theta))]
+    rotation = [1.0 + 0im 0; 0 exp(im * theta)]
     return Qubit(rotation * q.vector, q.bits)
 end
 
+# Multi-qubit operations
+
 # Implementing the swap gate
-# Mutating version of swap, using the Julia convention of appending ! to the mutating version
+# Mutating version of swap, using the Julia convention of appending ! to 
+# the mutating version
 function swap!(q::Qubit, from::Int = 1, to::Int = 2)
-    SWAP = @static [Complex(1) Complex(0) Complex(0) Complex(0);
-                    Complex(0) Complex(0) Complex(1) Complex(0);
-                    Complex(0) Complex(1) Complex(0) Complex(0);
-                    Complex(0) Complex(0) Complex(0) Complex(1)]
+    SWAP = @static [1.0 + 0im 0 0 0;
+                    0 0 1 0;
+                    0 1 0 0;
+                    0 0 0 1]
 
     # If we want to swap on the same location we have nothing to do
     if from == to
@@ -117,7 +140,8 @@ function swap!(q::Qubit, from::Int = 1, to::Int = 2)
     if q.bits == 1
         return
     elseif q.bits == 2
-        # If there are exactly 2 bits ignore the from and to arguments and swap them
+        # If there are exactly 2 bits ignore the from and to 
+        # arguments and swap them
         # alternatively we could throw an error here if from != 1 || to != 2
         q.vector = SWAP * q.vector
         return
@@ -127,8 +151,9 @@ function swap!(q::Qubit, from::Int = 1, to::Int = 2)
     low = min(from, to)
     high = max(from, to) - 1
 
-    # The final swap gate that first swaps the lower bit into location then proceeds
-    # to restore the original order, while swapping the high bit down to its new location
+    # The final swap gate that first swaps the lower bit into location then 
+    # proceeds to restore the original order, while swapping the high bit down 
+    # to its new location
     gate_array = fill(IDENTITY, q.bits - 1)
     gate_array[low] = SWAP
     swap_chain = kron(gate_array...)
@@ -160,10 +185,10 @@ end
 # Have not tested all cases, will look into later
 # Only changed this to work with the rewrite, didn't improve the algorithm
 function cnot(q::Qubit, control::Int, flip::Int)
-    CNOT = @static [Complex(1) Complex(0) Complex(0) Complex(0);
-                    Complex(0) Complex(1) Complex(0) Complex(0);
-                    Complex(0) Complex(0) Complex(0) Complex(1);
-                    Complex(0) Complex(0) Complex(1) Complex(0)]
+    CNOT = @static [1.0 + 0im 0 0 0;
+                    0 1 0 0;
+                    0 0 0 1;
+                    0 0 1 0]
 
     ret = copy(q)
     if ret.bits == 1
@@ -243,15 +268,6 @@ cnot3 = cnot(superbit3, 2, 1)
 
 # List of functions that need to be implemented
 #=
-function pauli_x()
-end
-
-function pauli_y()
-end
-
-function pauli_z()
-end
-
 function measure()
 end
 =#
