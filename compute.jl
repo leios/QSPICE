@@ -10,6 +10,7 @@
 #-----------------------------------------------------------------------------=#
 
 using Pipe
+using Iterators
 
 import Base.copy
 import Base.getindex
@@ -225,6 +226,36 @@ function cnot(q::Qubit, control::Int, flip::Int)
     return ret
 end
 
+# Returns the probability of finding each particular qubit state.
+function measure(q::Qubit)
+
+    # imap goes through each element in the array
+    return imap(x -> real(conj(x) * x), q.vector) |> collect
+end
+
+# Return array of all possible states, use at end with measure to create
+# classical bit string
+#=
+function find_states(q::Qubit)
+    bit_str = Array(AbstractString, length(q.vector))
+    for i = 1:length(bit_str)
+        # bits returns a binary string from the provied int value
+        # Then we truncate
+        bit_str[i] = bits(i-1)[length(bits(i-1)) - q.bits+1:length(bits(i-1))]
+    end
+    return bit_str
+end
+=#
+
+# This works with the measure function
+function find_states(a::Array{Any})
+  n_bits = floor(Int, log2(length(a)-1))
+  to_bitstring = x -> (bits(x[1] - 1)[end - n_bits:end], x[2]) 
+  return imap(to_bitstring, enumerate(a)) |> collect
+end
+
+find_states(q::Qubit) = find_states(measure(q))
+
 #=-----------------------------------------------------------------------------#
 # MAIN
 #-----------------------------------------------------------------------------=#
@@ -265,9 +296,3 @@ println("\nTesting cnot gate")
 cnot3 = cnot(superbit3, 2, 1)
 @show superbit3
 @show cnot3
-
-# List of functions that need to be implemented
-#=
-function measure()
-end
-=#
