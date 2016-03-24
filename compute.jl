@@ -256,6 +256,11 @@ end
 
 find_states(q::Qubit) = find_states(measure(q))
 
+qidentity(q::Qubit) = copy(q)
+
+# Comment out main for now
+#=
+
 #=-----------------------------------------------------------------------------#
 # MAIN
 #-----------------------------------------------------------------------------=#
@@ -296,3 +301,4 @@ println("\nTesting cnot gate")
 cnot3 = cnot(superbit3, 2, 1)
 @show superbit3
 @show cnot3
+=#
